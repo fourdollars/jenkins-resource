@@ -5,6 +5,7 @@ IFS=$'\n\t'
 
 clearup ()
 {
+    set +x
     rm -f "$apijson"
     rm -f "$tmp"
     rm -f /tmp/input.json
@@ -54,6 +55,12 @@ else
     port=""
 fi
 
+if [ "$(jq -r '.source | has("debug")' < /tmp/input.json)" = 'true' ]; then
+    debug="$(jq -r .source.debug < /tmp/input.json)"
+else
+    debug=""
+fi
+
 if [ "$(jq -r '.source | has("protocol")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .source.protocol < /tmp/input.json)" = "http" ]; then
     protocol="http"
 else
@@ -75,11 +82,15 @@ declare -A timestamps=()
 declare -A durations=()
 declare -A results=()
 
+if [ -n "$debug" ]; then
+    set -x
+fi
+
 case "$0" in
     ('/opt/resource/check')
         curl -nsS "$URL" > "$apijson"
         while read -r url; do
-            curl -nsS "${url}api/json" > "$tmp"
+            curl -nsS "${url}api/json" | jq -r > "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
             timestamp=$(jq -r .timestamp < "$tmp")
@@ -94,15 +105,57 @@ case "$0" in
         done < <(jq -r '.builds | .[].url' < "$apijson")
         ;;
     ('/opt/resource/in')
+        cd "$1"
+        expectedResult=()
+        url=
+        if [ "$(jq -r '.params | has("expectedResult")' < /tmp/input.json)" = 'true' ]; then
+            case "$(jq -r '.params.expectedResult | type' < /tmp/input.json)" in
+                ('string')
+                    expectedResult=("$(jq -r '.params.expectedResult' < /tmp/input.json)")
+                    ;;
+                ('array')
+                    mapfile -t expectedResult < <(jq -r '.params.expectedResult|.[]' < /tmp/input.json | sort)
+                    ;;
+                (*)
+                    echo "Type '$(jq -r '.params.expectedResult | type' < /tmp/input.json)' input is invalid for .params.expectedResult"
+                    exit 1
+                    ;;
+            esac
+            while :; do
+                curl -nsS "$URL" > "$apijson"
+                while read -r url; do
+                    curl -nsS "${url}api/json" | jq -r > "$tmp"
+                    result=$(jq -r .result < "$tmp")
+                    if [[ "${expectedResult[*]}" =~ $result ]]; then
+                        break 2
+                    else
+                        sleep 10
+                        break
+                    fi
+                done < <(jq -r '.builds | .[].url' < "$apijson")
+            done
+        fi
+        if [ -z "$url" ]; then
+            curl -nsS "$URL" > "$apijson"
+            while read -r url; do
+                curl -nsS "${url}api/json" | jq -r > "$tmp"
+                break
+            done < <(jq -r '.builds | .[].url' < "$apijson")
+        fi
+        cp "$tmp" api.json
+        id=$(jq -r .id < "$tmp")
+        name=$(jq -r .fullDisplayName < "$tmp")
+        timestamp=$(jq -r .timestamp < "$tmp")
+        duration=$(jq -r .duration < "$tmp")
+        result=$(jq -r .result < "$tmp")
         ;;
     ('/opt/resource/out')
         ;;
 esac
 
-mapfile -t reverseIDs < <(sort -u -n <<<"${IDs[*]}")
-
 case "$0" in
     ('/opt/resource/check')
+        mapfile -t reverseIDs < <(sort -u -n <<<"${IDs[*]}")
         json=
         for id in "${reverseIDs[@]}"; do
             if [ -z "$json" ]; then
@@ -117,9 +170,28 @@ case "$0" in
             json='[]'
         fi
         ;;
-    ('/opt/resource/out')
-        ;;
     ('/opt/resource/in')
+        json=$(cat <<ENDLINE
+{
+  "version": {
+    "url": "${url}",
+    "name": "${name}",
+    "timestamp": "${timestamp}",
+    "duration": "${duration}",
+    "result": "${result}"
+  },
+  "metadata": [
+    {"name": "url", "value": "${url}"},
+    {"name": "name", "value": "${name}"},
+    {"name": "timestamp", "value": "${timestamp}"},
+    {"name": "duration", "value": "${duration}"},
+    {"name": "result", "value": "${result}"}
+  ]
+}
+ENDLINE
+)
+        ;;
+    ('/opt/resource/out')
         ;;
 esac
 
