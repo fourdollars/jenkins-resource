@@ -1,0 +1,128 @@
+#!/bin/bash
+
+set -euo pipefail
+IFS=$'\n\t'
+
+clearup ()
+{
+    rm -f "$apijson"
+    rm -f "$tmp"
+    rm -f /tmp/input.json
+    rm -f ~/.netrc
+}
+
+trap clearup EXIT INT TERM
+
+apijson=$(mktemp -u /tmp/json-XXXXXX)
+tmp=$(mktemp -u /tmp/json-XXXXXX)
+
+exec 3>&1
+exec 1>&2
+jq -M -S . < /dev/stdin > /tmp/input.json
+
+if [ "$(jq -r '.source | has("host")' < /tmp/input.json)" = 'true' ]; then
+    host="$(jq -r .source.host < /tmp/input.json)"
+else
+    echo 'You need to provide the host.'
+    exit 1
+fi
+
+if [ "$(jq -r '.source | has("user")' < /tmp/input.json)" = 'true' ]; then
+    user="$(jq -r .source.user < /tmp/input.json)"
+else
+    echo 'You need to provide the user.'
+    exit 1
+fi
+
+if [ "$(jq -r '.source | has("token")' < /tmp/input.json)" = 'true' ]; then
+    token="$(jq -r .source.token < /tmp/input.json)"
+else
+    echo 'You need to provide the token.'
+    exit 1
+fi
+
+if [ "$(jq -r '.source | has("job")' < /tmp/input.json)" = 'true' ]; then
+    job="$(jq -r .source.job < /tmp/input.json)"
+else
+    echo 'You need to provide the job.'
+    exit 1
+fi
+
+if [ "$(jq -r '.source | has("port")' < /tmp/input.json)" = 'true' ]; then
+    port=":$(jq -r .source.port < /tmp/input.json)"
+else
+    port=""
+fi
+
+if [ "$(jq -r '.source | has("protocol")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .source.protocol < /tmp/input.json)" = "http" ]; then
+    protocol="http"
+else
+    protocol="https"
+fi
+
+cat > ~/.netrc <<ENDLINE
+machine $host
+ login $user
+ password $token
+ENDLINE
+
+URL="$protocol://$host$port/$job/api/json"
+
+declare -a IDs=()
+declare -A URLs=()
+declare -A names=()
+declare -A timestamps=()
+declare -A durations=()
+declare -A results=()
+
+case "$0" in
+    ('/opt/resource/check')
+        curl -nsS "$URL" > "$apijson"
+        while read -r url; do
+            curl -nsS "${url}api/json" > "$tmp"
+            id=$(jq -r .id < "$tmp")
+            name=$(jq -r .fullDisplayName < "$tmp")
+            timestamp=$(jq -r .timestamp < "$tmp")
+            duration=$(jq -r .duration < "$tmp")
+            result=$(jq -r .result < "$tmp")
+            IDs+=("$id")
+            URLs[$id]="$url"
+            names[$id]=$(echo "$name" | sed -e 's/\\/\\\\/g' -e 's/\"/\\\"/g')
+            timestamps[$id]="$timestamp"
+            durations[$id]="$duration"
+            results[$id]="$result"
+        done < <(jq -r '.builds | .[].url' < "$apijson")
+        ;;
+    ('/opt/resource/in')
+        ;;
+    ('/opt/resource/out')
+        ;;
+esac
+
+mapfile -t reverseIDs < <(sort -u -n <<<"${IDs[*]}")
+
+case "$0" in
+    ('/opt/resource/check')
+        json=
+        for id in "${reverseIDs[@]}"; do
+            if [ -z "$json" ]; then
+                json='[{"url":"'"${URLs[$id]}"'","name":"'"${names[$id]}"'","timestamp":"'"${timestamps[$id]}"'","duration":"'"${durations[$id]}"'","result":"'"${results[$id]}"'"}'
+            else
+                json="$json"',{"url":"'"${URLs[$id]}"'","name":"'"${names[$id]}"'","timestamp":"'"${timestamps[$id]}"'","duration":"'"${durations[$id]}"'","result":"'"${results[$id]}"'"}'
+            fi
+        done
+        if [ -n "$json" ]; then
+            json="$json"']'
+        else
+            json='[]'
+        fi
+        ;;
+    ('/opt/resource/out')
+        ;;
+    ('/opt/resource/in')
+        ;;
+esac
+
+echo "$json" > "$tmp"
+sed -i 's/\t/ /g' "$tmp"
+jq -n --slurpfile all "$tmp" '$all[0]' >&3
