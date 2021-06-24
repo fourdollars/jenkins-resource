@@ -226,8 +226,9 @@ case "$0" in
             URL="$protocol://$host$port/$job/build"
         fi
 
-        curl -nsS -X POST -D headers "$URL" > "$apijson"
-        [ -n "$debug" ] && jq -r < "$apijson"
+        curl -nsS -X POST -D headers "$URL"
+
+        [ -n "$debug" ] && cat headers
 
         queue=$(grep '^Location: ' headers | awk '{print $2}' | tr -d '\r')
         duration=0
