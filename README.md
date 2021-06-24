@@ -78,7 +78,7 @@ resources:
 #### put step params
 
  * stringParameters: Optional.
- * fileParameter: Optional.
+ * fileParameters: Optional.
  * timeout: Optional, seconds to timeout. No timeout by default.
 
 ### Job Example
@@ -115,7 +115,7 @@ jobs:
       stringParameters:
         id: 123
         verbosity: high 
-      fileParameter:
+      fileParameters:
         FILE_LOCATION_AS_SET_IN_JENKINS: outgoing/api.json
     get_params:
       expectedResult:
