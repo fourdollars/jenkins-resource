@@ -159,9 +159,29 @@ case "$0" in
         json=
         for id in "${reverseIDs[@]}"; do
             if [ -z "$json" ]; then
-                json='[{"url":"'"${URLs[$id]}"'","name":"'"${names[$id]}"'","timestamp":"'"${timestamps[$id]}"'","duration":"'"${durations[$id]}"'","result":"'"${results[$id]}"'"}'
+                json=$(cat <<ENDLINE
+[
+  {
+    "url": "${URLs[$id]}",
+    "name": "${names[$id]}",
+    "timestamp": "${timestamps[$id]}",
+    "duration": "${durations[$id]}",
+    "result": "${results[$id]}"
+  }
+ENDLINE
+)
             else
-                json="$json"',{"url":"'"${URLs[$id]}"'","name":"'"${names[$id]}"'","timestamp":"'"${timestamps[$id]}"'","duration":"'"${durations[$id]}"'","result":"'"${results[$id]}"'"}'
+                json=$(cat <<ENDLINE
+$json,
+  {
+    "url": "${URLs[$id]}",
+    "name": "${names[$id]}",
+    "timestamp": "${timestamps[$id]}",
+    "duration": "${durations[$id]}",
+    "result": "${results[$id]}"
+  }
+ENDLINE
+)
             fi
         done
         if [ -n "$json" ]; then
