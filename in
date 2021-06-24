@@ -170,8 +170,8 @@ case "$0" in
         done < <(jq -r '.builds | .[].url' < "$apijson")
         ;;
     ('/opt/resource/in')
-        URL="$protocol://$host$port/$job/api/json"
         cd "$1"
+        URL="$protocol://$host$port/$job/api/json"
         expectedResult=()
         expectedMatch=
         url=
@@ -242,6 +242,7 @@ case "$0" in
         result=$(jq -r .result < "$tmp")
         ;;
     ('/opt/resource/out')
+        cd "$1"
         crumbIssuer="$protocol://$host$port/crumbIssuer/api/json"
         PARAMS=()
         if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ] || [ "$(jq -r '.params | has("fileParameter")' < /tmp/input.json)" = 'true' ]; then
@@ -249,13 +250,13 @@ case "$0" in
             if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ]; then
                 [ -n "$debug" ] && jq -r '.params.stringParameters' < /tmp/input.json
                 for key in $(jq -r '.params.stringParameters | to_entries | .[].key' < /tmp/input.json); do
-                    PARAMS+=(--data "$key=$(jq -r ".params.stringParameters.$key")")
+                    PARAMS+=("--data" "$key=$(jq -r ".params.stringParameters.$key" < /tmp/input.json)")
                 done
             fi
             if [ "$(jq -r '.params | has("fileParameter")' < /tmp/input.json)" = 'true' ]; then
                 [ -n "$debug" ] && jq -r '.params.fileParameters' < /tmp/input.json
                 for key in $(jq -r '.params.fileParameter | to_entries | .[].key' < /tmp/input.json); do
-                    PARAMS+=(--form "$key=@$(jq -r ".params.fileParameter.$key")")
+                    PARAMS+=("--form" "$key=@$(jq -r ".params.fileParameter.$key" < /tmp/input.json)")
                 done
             fi
         else
