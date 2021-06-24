@@ -248,6 +248,10 @@ case "$0" in
         if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ] || [ "$(jq -r '.params | has("fileParameter")' < /tmp/input.json)" = 'true' ]; then
             URL="$protocol://$host$port/$job/buildWithParameters"
             if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ]; then
+                if [ "$(jq -r '.params | has("fileParameter")' < /tmp/input.json)" = 'true' ]; then
+                    echo "Using stringParameters conflicts to using fileParameter. You can only use one of them."
+                    exit 1
+                fi
                 [ -n "$debug" ] && jq -r '.params.stringParameters' < /tmp/input.json
                 for key in $(jq -r '.params.stringParameters | to_entries | .[].key' < /tmp/input.json); do
                     PARAMS+=("--data" "$key=$(jq -r ".params.stringParameters.$key" < /tmp/input.json)")

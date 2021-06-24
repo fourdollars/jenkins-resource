@@ -74,8 +74,8 @@ resources:
 
 #### put step params
 
- * stringParameters: Optional.
- * fileParameter: Optional.
+ * stringParameters: Optional. Conflict to fileParameter.
+ * fileParameter: Optional. Conflict to stringParameters.
  * timeout: Optional, seconds to timeout. No timeout by default.
 
 ### Job Example
