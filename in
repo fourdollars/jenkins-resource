@@ -220,13 +220,18 @@ case "$0" in
         result=$(jq -r .result < "$tmp")
         ;;
     ('/opt/resource/out')
+        crumbIssuer="$protocol://$host$port/crumbIssuer/api/json"
         if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ] || [ "$(jq -r '.params | has("fileParameter")' < /tmp/input.json)" = 'true' ]; then
             URL="$protocol://$host$port/$job/buildWithParameters"
         else
             URL="$protocol://$host$port/$job/build"
         fi
 
-        curl -nsS -X POST -D headers "$URL"
+        curl -nsS -X GET "$crumbIssuer" > crumb.json
+        crumb=$(jq -r .crumb < crumb.json)
+        crumbRequestField=$(jq -r .crumbRequestField < crumb.json)
+
+        curl -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
 
         [ -n "$debug" ] && cat headers
 
