@@ -73,13 +73,17 @@ else
     protocol="https"
 fi
 
+if [ "$(jq -r '.params | has("timeout")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .params.timeout < /tmp/input.json)" = "http" ]; then
+    timeout=$(jq -r .params.timeout < /tmp/input.json)
+else
+    timeout=""
+fi
+
 cat > ~/.netrc <<ENDLINE
 machine $host
  login $user
  password $token
 ENDLINE
-
-URL="$protocol://$host$port/$job/api/json"
 
 declare -a IDs=()
 declare -A URLs=()
@@ -140,6 +144,7 @@ readable_duration()
 
 case "$0" in
     ('/opt/resource/check')
+        URL="$protocol://$host$port/$job/api/json"
         curl -nsS "$URL" > "$apijson"
         while read -r url; do
             curl -nsS "${url}api/json" | jq -r > "$tmp"
@@ -157,6 +162,7 @@ case "$0" in
         done < <(jq -r '.builds | .[].url' < "$apijson")
         ;;
     ('/opt/resource/in')
+        URL="$protocol://$host$port/$job/api/json"
         cd "$1"
         expectedResult=()
         url=
@@ -204,6 +210,43 @@ case "$0" in
         result=$(jq -r .result < "$tmp")
         ;;
     ('/opt/resource/out')
+        if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ] || [ "$(jq -r '.params | has("fileParameter")' < /tmp/input.json)" = 'true' ]; then
+            URL="$protocol://$host$port/$job/buildWithParameters"
+        else
+            URL="$protocol://$host$port/$job/build"
+        fi
+
+        curl -nsS -X POST -D headers "$URL" > "$apijson"
+        [ -n "$debug" ] && jq -r < "$apijson"
+
+        queue=$(grep '^Location: ' headers | awk '{print $2}' | tr -d '\r')
+        duration=0
+        url=
+
+        until [ -n "$timeout" ] || [[ $duration -ge $timeout ]]; do
+            curl -nsS "${queue}api/json" > queue.json
+            [ -n "$debug" ] && jq -r < queue.json
+            url=$(jq -r '.executable | .url' < queue.json)
+            if [ "$url" != 'null' ]; then
+                break
+            fi
+            sleep 5
+            duration=$((duration+5))
+        done
+
+        if [ -n "$url" ]; then
+            curl -nsS "${url}api/json" | jq -r > "$tmp"
+            id=$(jq -r .id < "$tmp")
+            name=$(jq -r .fullDisplayName < "$tmp")
+            timestamp=$(jq -r .timestamp < "$tmp")
+            timestamp=$(readable_timestamp "$timestamp")
+            duration=$(jq -r .duration < "$tmp")
+            duration=$(readable_duration "$duration")
+            result=$(jq -r .result < "$tmp")
+        else
+            echo "No build and timeout ($duration/$timeout)."
+            exit 1
+        fi
         ;;
 esac
 
@@ -244,7 +287,7 @@ ENDLINE
             json='[]'
         fi
         ;;
-    ('/opt/resource/in')
+    ('/opt/resource/in'|'/opt/resource/out')
         json=$(cat <<ENDLINE
 {
   "version": {
@@ -264,8 +307,6 @@ ENDLINE
 }
 ENDLINE
 )
-        ;;
-    ('/opt/resource/out')
         ;;
 esac
 

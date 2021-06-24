@@ -65,6 +65,17 @@ resources:
     protocol: http
 ```
 
+#### get step params
+
+ * expectedResult: Optional, waiting for the expected results.
+ * timeout: Optional, seconds to timeout. No timeout by default.
+
+#### put step params
+
+ * stringParameters: Optional.
+ * fileParameter: Optional.
+ * timeout: Optional, seconds to timeout. No timeout by default.
+
 ### Job Example
 
 ```yaml
