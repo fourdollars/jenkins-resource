@@ -1,6 +1,6 @@
  [![GitHub: fourdollars/jenkins-resource](https://img.shields.io/badge/GitHub-fourdollars%2Fjenkins%E2%80%90resource-lightgray.svg)](https://github.com/fourdollars/jenkins-resource/) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT) [![Bash](https://img.shields.io/badge/Language-Bash-red.svg)](https://www.gnu.org/software/bash/) ![Docker](https://github.com/fourdollars/jenkins-resource/workflows/Docker/badge.svg) [![Docker Pulls](https://img.shields.io/docker/pulls/fourdollars/jenkins-resource.svg)](https://hub.docker.com/r/fourdollars/jenkins-resource/)
 # jenkins-resource
-[concourse-ci](https://concourse-ci.org/)'s jenkins-resource to watch and operate the Jenkins jobs by https://www.jenkins.io/doc/book/using/remote-access-api/.
+[Concourse CI](https://concourse-ci.org/)'s jenkins-resource to watch and trigger the Jenkins builds by https://www.jenkins.io/doc/book/using/remote-access-api/.
 
 Working in progress
 
