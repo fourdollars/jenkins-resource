@@ -145,9 +145,9 @@ readable_duration()
 case "$0" in
     ('/opt/resource/check')
         URL="$protocol://$host$port/$job/api/json"
-        curl -nsS "$URL" > "$apijson"
+        curl --retry 3 -nsS "$URL" > "$apijson"
         while read -r url; do
-            curl -nsS "${url}api/json" | jq -r > "$tmp"
+            curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
             timestamp=$(jq -r .timestamp < "$tmp")
@@ -182,9 +182,9 @@ case "$0" in
             esac
             duration=0
             until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
-                curl -nsS "$URL" > "$apijson"
+                curl --retry 3 -nsS "$URL" > "$apijson"
                 while read -r url; do
-                    curl -nsS "${url}api/json" | jq -r > "$tmp"
+                    curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
                     result=$(jq -r .result < "$tmp")
                     if [[ "${expectedResult[*]}" =~ $result ]]; then
                         expectedMatch=1
@@ -204,9 +204,9 @@ case "$0" in
             fi
         fi
         if [ -z "$url" ]; then
-            curl -nsS "$URL" > "$apijson"
+            curl --retry 3 -nsS "$URL" > "$apijson"
             while read -r url; do
-                curl -nsS "${url}api/json" | jq -r > "$tmp"
+                curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
                 break
             done < <(jq -r '.builds | .[].url' < "$apijson")
         fi
@@ -227,11 +227,11 @@ case "$0" in
             URL="$protocol://$host$port/$job/build"
         fi
 
-        curl -nsS -X GET "$crumbIssuer" > crumb.json
+        curl --retry 3 -nsS -X GET "$crumbIssuer" > crumb.json
         crumb=$(jq -r .crumb < crumb.json)
         crumbRequestField=$(jq -r .crumbRequestField < crumb.json)
 
-        curl -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
+        curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
 
         [ -n "$debug" ] && cat headers
 
@@ -240,7 +240,7 @@ case "$0" in
         url=
 
         until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
-            curl -nsS "${queue}api/json" > queue.json
+            curl --retry 3 -nsS "${queue}api/json" > queue.json
             [ -n "$debug" ] && jq -r < queue.json
             url=$(jq -r '.executable | .url' < queue.json)
             if [ "$url" != 'null' ]; then
@@ -251,7 +251,7 @@ case "$0" in
         done
 
         if [ -n "$url" ]; then
-            curl -nsS "${url}api/json" | jq -r > "$tmp"
+            curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
             timestamp=$(jq -r .timestamp < "$tmp")
