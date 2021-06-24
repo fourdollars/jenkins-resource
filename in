@@ -165,6 +165,7 @@ case "$0" in
         URL="$protocol://$host$port/$job/api/json"
         cd "$1"
         expectedResult=()
+        expectedMatch=
         url=
         if [ "$(jq -r '.params | has("expectedResult")' < /tmp/input.json)" = 'true' ]; then
             case "$(jq -r '.params.expectedResult | type' < /tmp/input.json)" in
@@ -179,19 +180,28 @@ case "$0" in
                     exit 1
                     ;;
             esac
-            while :; do
+            duration=0
+            until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
                 curl -nsS "$URL" > "$apijson"
                 while read -r url; do
                     curl -nsS "${url}api/json" | jq -r > "$tmp"
                     result=$(jq -r .result < "$tmp")
                     if [[ "${expectedResult[*]}" =~ $result ]]; then
+                        expectedMatch=1
                         break 2
-                    else
-                        sleep 10
+                    elif [ "$result" = 'null' ]; then
+                        sleep 5
+                        duration=$((duration+5))
                         break
+                    else
+                        break 2
                     fi
                 done < <(jq -r '.builds | .[].url' < "$apijson")
             done
+            if [ -n "$url" ] && [ -z "$expectedMatch" ]; then
+                echo "$url doesn't have the expected results or timed out ($duration/$timeout)."
+                exit 1
+            fi
         fi
         if [ -z "$url" ]; then
             curl -nsS "$URL" > "$apijson"
@@ -223,7 +233,7 @@ case "$0" in
         duration=0
         url=
 
-        until [ -n "$timeout" ] || [[ $duration -ge $timeout ]]; do
+        until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
             curl -nsS "${queue}api/json" > queue.json
             [ -n "$debug" ] && jq -r < queue.json
             url=$(jq -r '.executable | .url' < queue.json)
@@ -244,7 +254,7 @@ case "$0" in
             duration=$(readable_duration "$duration")
             result=$(jq -r .result < "$tmp")
         else
-            echo "No build and timeout ($duration/$timeout)."
+            echo "No build and timed out ($duration/$timeout)."
             exit 1
         fi
         ;;
