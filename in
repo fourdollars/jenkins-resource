@@ -83,6 +83,12 @@ else
     protocol="https"
 fi
 
+if [ "$(jq -r '.params | has("skip")' < /tmp/input.json)" = 'true' ]; then
+    skip=$(jq -r .params.skip < /tmp/input.json)
+else
+    skip=
+fi
+
 if [ "$(jq -r '.params | has("timeout")' < /tmp/input.json)" = 'true' ]; then
     timeout=$(jq -r .params.timeout < /tmp/input.json)
 elif [ "$(jq -r '.source | has("timeout")' < /tmp/input.json)" = 'true' ]; then
@@ -209,7 +215,20 @@ case "$0" in
         if [ -z "$url" ]; then
             curl --retry 3 -nsS "$URL" > "$apijson"
             while read -r url; do
-                curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+                duration=0
+                until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
+                    curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+                    if [ -n "$skip" ]; then
+                        break 2
+                    fi
+                    result=$(jq -r .result < "$tmp")
+                    if [ "$result" = 'null' ]; then
+                        sleep 5
+                        duration=$((duration+5))
+                    else
+                        break 2
+                    fi
+                done
                 break
             done < <(jq -r '.builds | .[].url' < "$apijson")
         fi

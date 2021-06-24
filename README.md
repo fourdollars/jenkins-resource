@@ -70,6 +70,7 @@ resources:
 
  * expectedResult: Optional, waiting for the expected results.
  * timeout: Optional, seconds to timeout. No timeout by default.
+ * skip: Don't wait for the result.
 
 #### put step params
 
