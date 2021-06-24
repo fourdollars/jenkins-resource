@@ -83,6 +83,12 @@ else
     protocol="https"
 fi
 
+if [ "$(jq -r '.source | has("builds")' < /tmp/input.json)" = 'true' ]; then
+    builds=$(jq -r .source.builds < /tmp/input.json)
+else
+    builds=
+fi
+
 if [ "$(jq -r '.params | has("skip")' < /tmp/input.json)" = 'true' ]; then
     skip=$(jq -r .params.skip < /tmp/input.json)
 else
@@ -169,6 +175,9 @@ case "$0" in
             timestamps[$id]=$(readable_timestamp "$timestamp")
             durations[$id]=$(readable_duration "$duration")
             results[$id]="$result"
+            if [ -n "$builds" ] && [[ "$builds" -eq "${#IDs[*]}" ]]; then
+                break
+            fi
         done < <(jq -r '.builds | .[].url' < "$apijson")
         ;;
     ('/opt/resource/in')

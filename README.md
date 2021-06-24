@@ -38,6 +38,7 @@ resource_types:
 * protocol: Optional, using 'https' by default.
 * timezone: Optional, such as 'Asia/Taipei'. 'UTC' by default.
 * timeout: Optional, seconds to timeout. No timeout by default.
+* builds: Limit the build number to check. No limit by default.
 * debug: Optional
 
 ```yaml
@@ -53,6 +54,7 @@ resources:
     job: job/test
     port: 8080
     protocol: http
+    builds: 5
 - name: release
   icon: bow-tie
   type: resource-jenkins
@@ -64,6 +66,7 @@ resources:
     job: job/release
     port: 8080
     protocol: http
+    builds: 5
 ```
 
 #### get step params
