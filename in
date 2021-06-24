@@ -181,6 +181,7 @@ case "$0" in
                     ;;
             esac
             duration=0
+            result=
             until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
                 curl --retry 3 -nsS "$URL" > "$apijson"
                 while read -r url; do
@@ -199,7 +200,7 @@ case "$0" in
                 done < <(jq -r '.builds | .[].url' < "$apijson")
             done
             if [ -n "$url" ] && [ -z "$expectedMatch" ]; then
-                echo "$url doesn't have the expected results or timed out ($duration/$timeout)."
+                echo "$url doesn't have the expected results '${expectedResult[*]}' ($result) or timed out ($duration/$timeout)."
                 exit 1
             fi
         fi
