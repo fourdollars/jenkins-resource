@@ -250,7 +250,7 @@ case "$0" in
             duration=$((duration+5))
         done
 
-        if [ -n "$url" ]; then
+        if [ "$url" != 'null' ]; then
             curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
