@@ -2,8 +2,6 @@
 # jenkins-resource
 [Concourse CI](https://concourse-ci.org/)'s jenkins-resource to watch and trigger the Jenkins builds by https://www.jenkins.io/doc/book/using/remote-access-api/.
 
-Working in progress
-
 ## Config 
 
 ### Resource Type
