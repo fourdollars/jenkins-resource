@@ -42,6 +42,22 @@ else
     exit 1
 fi
 
+cat > ~/.netrc <<ENDLINE
+machine $host
+ login $user
+ password $token
+ENDLINE
+
+if [ "$(jq -r '.source | has("debug")' < /tmp/input.json)" = 'true' ]; then
+    debug="$(jq -r .source.debug < /tmp/input.json)"
+else
+    debug=""
+fi
+
+if [ -n "$debug" ]; then
+    set -x
+fi
+
 if [ "$(jq -r '.source | has("job")' < /tmp/input.json)" = 'true' ]; then
     job="$(jq -r .source.job < /tmp/input.json)"
 else
@@ -61,12 +77,6 @@ else
     timezone=UTC
 fi
 
-if [ "$(jq -r '.source | has("debug")' < /tmp/input.json)" = 'true' ]; then
-    debug="$(jq -r .source.debug < /tmp/input.json)"
-else
-    debug=""
-fi
-
 if [ "$(jq -r '.source | has("protocol")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .source.protocol < /tmp/input.json)" = "http" ]; then
     protocol="http"
 else
@@ -79,22 +89,12 @@ else
     timeout=""
 fi
 
-cat > ~/.netrc <<ENDLINE
-machine $host
- login $user
- password $token
-ENDLINE
-
 declare -a IDs=()
 declare -A URLs=()
 declare -A names=()
 declare -A timestamps=()
 declare -A durations=()
 declare -A results=()
-
-if [ -n "$debug" ]; then
-    set -x
-fi
 
 readable_timestamp()
 {
