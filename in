@@ -51,7 +51,7 @@ ENDLINE
 if [ "$(jq -r '.source | has("debug")' < /tmp/input.json)" = 'true' ]; then
     debug="$(jq -r .source.debug < /tmp/input.json)"
 else
-    debug=""
+    debug=
 fi
 
 if [ -n "$debug" ]; then
@@ -153,8 +153,10 @@ readable_duration()
 case "$0" in
     ('/opt/resource/check')
         URL="$protocol://$host$port/$job/api/json"
+        [ -z "$debug" ] && echo "curl -nsS ${URL}"
         curl --retry 3 -nsS "$URL" > "$apijson"
         while read -r url; do
+            [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
@@ -191,8 +193,10 @@ case "$0" in
             duration=0
             result=
             until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
+                [ -z "$debug" ] && echo "curl -nsS ${URL}  # $duration/$timeout"
                 curl --retry 3 -nsS "$URL" > "$apijson"
                 while read -r url; do
+                    [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
                     curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
                     result=$(jq -r .result < "$tmp")
                     if [[ "${expectedResult[*]}" =~ $result ]]; then
@@ -208,15 +212,19 @@ case "$0" in
                 done < <(jq -r '.builds | .[].url' < "$apijson")
             done
             if [ -n "$url" ] && [ -z "$expectedMatch" ]; then
+                IFS=' '
                 echo "$url doesn't have the expected results in \"${expectedResult[*]}\" ($result) or timed out ($duration/$timeout)."
+                IFS=$'\n\t'
                 exit 1
             fi
         fi
         if [ -z "$url" ]; then
+            [ -z "$debug" ] && echo "curl -nsS $URL"
             curl --retry 3 -nsS "$URL" > "$apijson"
             while read -r url; do
                 duration=0
                 until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
+                    [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
                     curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
                     if [ -n "$skip" ]; then
                         break 2
@@ -267,13 +275,18 @@ case "$0" in
             URL="$protocol://$host$port/$job/build"
         fi
 
-        curl --retry 3 -nsS -X GET "$crumbIssuer" > crumb.json
+        [ -z "$debug" ] && echo "curl -nsS $crumbIssuer"
+        curl --retry 3 -nsS "$crumbIssuer" > crumb.json
         crumb=$(jq -r .crumb < crumb.json)
         crumbRequestField=$(jq -r .crumbRequestField < crumb.json)
 
         if [ -z "${PARAMS[*]}" ]; then
+            [ -z "$debug" ] && echo "curl -nsS -X POST -D headers $URL"
             curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
         else
+            IFS=' '
+            [ -z "$debug" ] && echo "curl -nsS -X POST -D headers $URL ${PARAMS[*]}"
+            IFS=$'\n\t'
             curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb" "${PARAMS[@]}"
         fi
 
@@ -284,6 +297,7 @@ case "$0" in
         url=
 
         until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
+            [ -z "$debug" ] && echo "curl -nsS ${queue}api/json  # $duration/$timeout"
             curl --retry 3 -nsS "${queue}api/json" > queue.json
             [ -n "$debug" ] && jq -r < queue.json
             url=$(jq -r '.executable | .url' < queue.json)
@@ -295,6 +309,7 @@ case "$0" in
         done
 
         if [ "$url" != 'null' ]; then
+            [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
