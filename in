@@ -83,7 +83,7 @@ else
     protocol="https"
 fi
 
-if [ "$(jq -r '.params | has("timeout")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .params.timeout < /tmp/input.json)" = "http" ]; then
+if [ "$(jq -r '.params | has("timeout")' < /tmp/input.json)" = 'true' ]; then
     timeout=$(jq -r .params.timeout < /tmp/input.json)
 else
     timeout=""
