@@ -85,6 +85,8 @@ fi
 
 if [ "$(jq -r '.params | has("timeout")' < /tmp/input.json)" = 'true' ]; then
     timeout=$(jq -r .params.timeout < /tmp/input.json)
+elif [ "$(jq -r '.source | has("timeout")' < /tmp/input.json)" = 'true' ]; then
+    timeout=$(jq -r .source.timeout < /tmp/input.json)
 else
     timeout=""
 fi
