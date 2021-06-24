@@ -1,7 +1,7 @@
 FROM alpine:latest
 RUN apk update
 RUN apk upgrade
-RUN apk add bash jq curl
+RUN apk add bash jq curl tzdata
 ADD /check /opt/resource/check
 ADD /out /opt/resource/out
 ADD /in /opt/resource/in

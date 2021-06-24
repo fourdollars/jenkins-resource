@@ -55,6 +55,12 @@ else
     port=""
 fi
 
+if [ "$(jq -r '.source | has("timezone")' < /tmp/input.json)" = 'true' ]; then
+    timezone="$(jq -r .source.timezone < /tmp/input.json)"
+else
+    timezone=UTC
+fi
+
 if [ "$(jq -r '.source | has("debug")' < /tmp/input.json)" = 'true' ]; then
     debug="$(jq -r .source.debug < /tmp/input.json)"
 else
@@ -86,6 +92,52 @@ if [ -n "$debug" ]; then
     set -x
 fi
 
+readable_timestamp()
+{
+    if [ "$1" = 'null' ]; then
+        echo 'null'
+        return
+    fi
+    TZ="$timezone" date --date="@$(($1/1000))"
+}
+
+readable_duration()
+{
+    if [ "$1" = 'null' ]; then
+        echo 'null'
+        return
+    fi
+    if [ "$1" -lt 1000 ]; then
+        echo "$1 ms"
+        return
+    fi
+    local T=$(($1/1000))
+    local D=$((T/60/60/24))
+    local H=$((T/60/60%24))
+    local M=$((T/60%60))
+    local S=$((T%60))
+    if [ $D -eq 1 ]; then
+        echo -n "$D day "
+    elif [ $D -gt 1 ]; then
+        echo -n "$D days "
+    fi
+    if [ $H -eq 1 ]; then
+        echo -n "$H hour "
+    elif [ $H -gt 1 ]; then
+        echo -n "$H hours "
+    fi
+    if [ $M -eq 1 ]; then
+        echo -n "$M minute "
+    elif [ $M -gt 1 ]; then
+        echo -n "$M minutes "
+    fi
+    if [ $S -eq 1 ]; then
+        echo "$S second"
+    elif [ $S -gt 1 ]; then
+        echo "$S seconds"
+    fi
+}
+
 case "$0" in
     ('/opt/resource/check')
         curl -nsS "$URL" > "$apijson"
@@ -99,8 +151,8 @@ case "$0" in
             IDs+=("$id")
             URLs[$id]="$url"
             names[$id]=$(echo "$name" | sed -e 's/\\/\\\\/g' -e 's/\"/\\\"/g')
-            timestamps[$id]="$timestamp"
-            durations[$id]="$duration"
+            timestamps[$id]=$(readable_timestamp "$timestamp")
+            durations[$id]=$(readable_duration "$duration")
             results[$id]="$result"
         done < <(jq -r '.builds | .[].url' < "$apijson")
         ;;
@@ -146,7 +198,9 @@ case "$0" in
         id=$(jq -r .id < "$tmp")
         name=$(jq -r .fullDisplayName < "$tmp")
         timestamp=$(jq -r .timestamp < "$tmp")
+        timestamp=$(readable_timestamp "$timestamp")
         duration=$(jq -r .duration < "$tmp")
+        duration=$(readable_duration "$duration")
         result=$(jq -r .result < "$tmp")
         ;;
     ('/opt/resource/out')

@@ -36,6 +36,7 @@ resource_types:
 * job: **Required**, such as 'job/JOB_NAME'.
 * port: Optional
 * protocol: Optional, using 'https' by default.
+* timezone: Optional, such as 'Asia/Taipei'. 'UTC' by default.
 * debug: Optional
 
 ```yaml
