@@ -103,7 +103,10 @@ else
     timeout=""
 fi
 
-[ -n "$debug" ] && [ "$(jq -r 'has("version")' < /tmp/input.json)" = 'true' ] && jq -r -S -M '.version' < /tmp/input.json
+if [ -n "$debug" ]; then
+    printenv
+    [ "$(jq -r 'has("version")' < /tmp/input.json)" = 'true' ] && jq -r -S -M '.version' < /tmp/input.json
+fi
 
 readable_timestamp()
 {
