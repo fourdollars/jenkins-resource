@@ -97,6 +97,8 @@ fi
 
 if [ "$(jq -r '.params | has("skip")' < /tmp/input.json)" = 'true' ]; then
     skip=$(jq -r .params.skip < /tmp/input.json)
+elif [ "$(jq -r '.source | has("skip")' < /tmp/input.json)" = 'true' ]; then
+    skip=$(jq -r .source.skip < /tmp/input.json)
 else
     skip=
 fi
@@ -183,6 +185,9 @@ case "$0" in
             timestamp=$(jq -r .timestamp < "$tmp")
             duration=$(jq -r .duration < "$tmp")
             result=$(jq -r .result < "$tmp")
+            if [ -z "$skip" ] && [ "$result" = 'null' ]; then
+                continue
+            fi
             IDs+=("$id")
             URLs[$id]="$url"
             names[$id]=$(echo "$name" | sed -e 's/\\/\\\\/g' -e 's/\"/\\\"/g')

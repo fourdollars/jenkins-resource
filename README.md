@@ -37,6 +37,7 @@ resource_types:
 * timezone: Optional, such as 'Asia/Taipei'. 'UTC' by default.
 * timeout: Optional, seconds to timeout. No timeout by default.
 * builds: Limit the build number to check. No limit by default.
+* skip: Don't check the result in check step or don't wait for the result in get step.
 * crumb: Optional, 'skip' if you want to skip the crumbIssuer.
 * debug: Optional
 
@@ -67,6 +68,10 @@ resources:
     protocol: http
     builds: 5
 ```
+
+#### check step params
+
+ * skip: Don't check the result to skip the builds without result.
 
 #### get step params
 
