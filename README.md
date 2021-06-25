@@ -37,6 +37,7 @@ resource_types:
 * timezone: Optional, such as 'Asia/Taipei'. 'UTC' by default.
 * timeout: Optional, seconds to timeout. No timeout by default.
 * builds: Limit the build number to check. No limit by default.
+* crumb: Optional, 'skip' if you want to skip the crumbIssuer.
 * debug: Optional
 
 ```yaml

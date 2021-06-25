@@ -65,6 +65,12 @@ else
     exit 1
 fi
 
+if [ "$(jq -r '.source | has("crumb")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .source.crumb < /tmp/input.json)" = 'skip' ]; then
+    crumb_skip=1
+else
+    crumb_skip=
+fi
+
 if [ "$(jq -r '.source | has("port")' < /tmp/input.json)" = 'true' ]; then
     port=":$(jq -r .source.port < /tmp/input.json)"
 else
@@ -301,7 +307,6 @@ case "$0" in
         ;;
     ('/opt/resource/out')
         cd "$1"
-        crumbIssuer="$protocol://$host$port/crumbIssuer/api/json"
         PARAMS=()
         if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ] || [ "$(jq -r '.params | has("fileParameters")' < /tmp/input.json)" = 'true' ]; then
             URL="$protocol://$host$port/$job/buildWithParameters"
@@ -321,19 +326,30 @@ case "$0" in
             URL="$protocol://$host$port/$job/build"
         fi
 
-        [ -z "$debug" ] && echo "curl -nsS $crumbIssuer"
-        curl --retry 3 -nsS "$crumbIssuer" > crumb.json
-        crumb=$(jq -r .crumb < crumb.json)
-        crumbRequestField=$(jq -r .crumbRequestField < crumb.json)
+        if [ -z "$crumb_skip" ]; then
+            crumbIssuer="$protocol://$host$port/crumbIssuer/api/json"
+            [ -z "$debug" ] && echo "curl -nsS $crumbIssuer"
+            curl --retry 3 -nsS "$crumbIssuer" > crumb.json
+            crumb=$(jq -r .crumb < crumb.json)
+            crumbRequestField=$(jq -r .crumbRequestField < crumb.json)
+        fi
 
         if [ -z "${PARAMS[*]}" ]; then
             [ -z "$debug" ] && echo "curl -nsS -X POST $URL"
-            curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
+            if [ -z "$crumb_skip" ]; then
+                curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
+            else
+                curl --retry 3 -nsS -X POST -D headers "$URL"
+            fi
         else
             IFS=' '
             [ -z "$debug" ] && echo "curl -nsS -X POST $URL ${PARAMS[*]}"
             IFS=$'\n\t'
-            curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb" "${PARAMS[@]}"
+            if [ -z "$crumb_skip" ]; then
+                curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb" "${PARAMS[@]}"
+            else
+                curl --retry 3 -nsS -X POST -D headers "$URL" "${PARAMS[@]}"
+            fi
         fi
 
         [ -n "$debug" ] && cat headers
