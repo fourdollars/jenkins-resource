@@ -113,7 +113,7 @@ fi
 
 if [ -n "$debug" ]; then
     printenv
-    [ "$(jq -r 'has("version")' < /tmp/input.json)" = 'true' ] && jq -r -S -M '.version' < /tmp/input.json
+    [ "$(jq -r 'has("version")' < /tmp/input.json)" = 'true' ] && jq -r -S -C '.version' < /tmp/input.json
 fi
 
 readable_timestamp()
@@ -179,7 +179,7 @@ case "$0" in
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
             digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
-            [ -n "$debug" ] && jq -r -S -M < "$tmp"
+            [ -n "$debug" ] && jq -r -S -C < "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
             timestamp=$(jq -r .timestamp < "$tmp")
@@ -301,7 +301,7 @@ case "$0" in
         fi
         cp "$tmp" api.json
         digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
-        [ -n "$debug" ] && jq -r -S -M < "$tmp"
+        [ -n "$debug" ] && jq -r -S -C < "$tmp"
         id=$(jq -r .id < "$tmp")
         name=$(jq -r .fullDisplayName < "$tmp")
         timestamp=$(jq -r .timestamp < "$tmp")
@@ -316,13 +316,13 @@ case "$0" in
         if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ] || [ "$(jq -r '.params | has("fileParameters")' < /tmp/input.json)" = 'true' ]; then
             URL="$protocol://$host$port/$job/buildWithParameters"
             if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ]; then
-                [ -n "$debug" ] && jq -r '.params.stringParameters' < /tmp/input.json
+                [ -n "$debug" ] && jq -r -S -C '.params.stringParameters' < /tmp/input.json
                 for key in $(jq -r '.params.stringParameters | to_entries | .[].key' < /tmp/input.json); do
                     PARAMS+=("--form" "$key=$(jq -r ".params.stringParameters.$key" < /tmp/input.json)")
                 done
             fi
             if [ "$(jq -r '.params | has("fileParameters")' < /tmp/input.json)" = 'true' ]; then
-                [ -n "$debug" ] && jq -r '.params.fileParameters' < /tmp/input.json
+                [ -n "$debug" ] && jq -r -S -C '.params.fileParameters' < /tmp/input.json
                 for key in $(jq -r '.params.fileParameters | to_entries | .[].key' < /tmp/input.json); do
                     PARAMS+=("--form" "$key=@$(jq -r ".params.fileParameters.$key" < /tmp/input.json)")
                 done
@@ -366,7 +366,7 @@ case "$0" in
         until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
             [ -z "$debug" ] && echo "curl -nsS ${queue}api/json  # $duration/$timeout"
             curl --retry 3 -nsS "${queue}api/json" > queue.json
-            [ -n "$debug" ] && jq -r < queue.json
+            [ -n "$debug" ] && jq -r -S -C < queue.json
             url=$(jq -r '.executable | .url' < queue.json)
             if [ "$url" != 'null' ]; then
                 break
@@ -379,7 +379,7 @@ case "$0" in
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
             digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
-            [ -n "$debug" ] && jq -r -S -M < "$tmp"
+            [ -n "$debug" ] && jq -r -S -C < "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
             timestamp=$(jq -r .timestamp < "$tmp")
