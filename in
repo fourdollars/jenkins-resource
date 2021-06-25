@@ -170,14 +170,16 @@ declare -A durations=()
 declare -A results=()
 declare -A digests=()
 
+CURL=(curl --retry 3 --max-time 10 -nsS)
+
 case "$0" in
     ('/opt/resource/check')
         URL="$protocol://$host$port/$job/api/json"
         [ -z "$debug" ] && echo "curl -nsS ${URL}"
-        curl --retry 3 -nsS "$URL" > "$apijson"
+        "${CURL[@]}" "$URL" > "$apijson"
         while read -r url; do
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
-            curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+            "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
             digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
             [ -n "$debug" ] && jq -r -S -C < "$tmp"
             id=$(jq -r .id < "$tmp")
@@ -228,7 +230,7 @@ case "$0" in
                 if [ "$(jq -r '.version | has("url")' < /tmp/input.json)" = 'true' ]; then
                     url=$(jq -r '.version.url' < /tmp/input.json)
                     [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
-                    curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+                    "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                     result=$(jq -r .result < "$tmp")
                     if [[ "${expectedResult[*]}" =~ $result ]]; then
                         expectedMatch=1
@@ -241,10 +243,10 @@ case "$0" in
                     fi
                 else
                     [ -z "$debug" ] && echo "curl -nsS ${URL}  # $duration/$timeout"
-                    curl --retry 3 -nsS "$URL" > "$apijson"
+                    "${CURL[@]}" "$URL" > "$apijson"
                     while read -r url; do
                         [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
-                        curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+                        "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                         result=$(jq -r .result < "$tmp")
                         if [[ "${expectedResult[*]}" =~ $result ]]; then
                             expectedMatch=1
@@ -272,7 +274,7 @@ case "$0" in
                 duration=0
                 until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
                     [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
-                    curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+                    "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                     result=$(jq -r .result < "$tmp")
                     if [ -n "$skip" ] || [ "$result" != 'null' ]; then
                         break
@@ -282,12 +284,12 @@ case "$0" in
                 done
             else
                 [ -z "$debug" ] && echo "curl -nsS $URL"
-                curl --retry 3 -nsS "$URL" > "$apijson"
+                "${CURL[@]}" "$URL" > "$apijson"
                 while read -r url; do
                     duration=0
                     until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
                         [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
-                        curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+                        "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                         result=$(jq -r .result < "$tmp")
                         if [ -n "$skip" ] || [ "$result" != 'null' ]; then
                             break 2
@@ -334,7 +336,7 @@ case "$0" in
         if [ -z "$crumb_skip" ]; then
             crumbIssuer="$protocol://$host$port/crumbIssuer/api/json"
             [ -z "$debug" ] && echo "curl -nsS $crumbIssuer"
-            curl --retry 3 -nsS "$crumbIssuer" > crumb.json
+            "${CURL[@]}" "$crumbIssuer" > crumb.json
             crumb=$(jq -r .crumb < crumb.json)
             crumbRequestField=$(jq -r .crumbRequestField < crumb.json)
         fi
@@ -342,18 +344,18 @@ case "$0" in
         if [ -z "${PARAMS[*]}" ]; then
             [ -z "$debug" ] && echo "curl -nsS -X POST $URL"
             if [ -z "$crumb_skip" ]; then
-                curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
+                "${CURL[@]}" -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
             else
-                curl --retry 3 -nsS -X POST -D headers "$URL"
+                "${CURL[@]}" -X POST -D headers "$URL"
             fi
         else
             IFS=' '
             [ -z "$debug" ] && echo "curl -nsS -X POST $URL ${PARAMS[*]}"
             IFS=$'\n\t'
             if [ -z "$crumb_skip" ]; then
-                curl --retry 3 -nsS -X POST -D headers "$URL" -H "$crumbRequestField: $crumb" "${PARAMS[@]}"
+                "${CURL[@]}" -X POST -D headers "$URL" -H "$crumbRequestField: $crumb" "${PARAMS[@]}"
             else
-                curl --retry 3 -nsS -X POST -D headers "$URL" "${PARAMS[@]}"
+                "${CURL[@]}" -X POST -D headers "$URL" "${PARAMS[@]}"
             fi
         fi
 
@@ -365,7 +367,7 @@ case "$0" in
 
         until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
             [ -z "$debug" ] && echo "curl -nsS ${queue}api/json  # $duration/$timeout"
-            curl --retry 3 -nsS "${queue}api/json" > queue.json
+            "${CURL[@]}" "${queue}api/json" > queue.json
             [ -n "$debug" ] && jq -r -S -C < queue.json
             url=$(jq -r '.executable | .url' < queue.json)
             if [ "$url" != 'null' ]; then
@@ -377,7 +379,7 @@ case "$0" in
 
         if [ "$url" != 'null' ]; then
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
-            curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+            "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
             digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
             [ -n "$debug" ] && jq -r -S -C < "$tmp"
             id=$(jq -r .id < "$tmp")
