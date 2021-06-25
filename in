@@ -54,7 +54,7 @@ else
     debug=
 fi
 
-if [ -n "$debug" ]; then
+if [ -n "$debug" ] && [ "$debug" = "verbose" ]; then
     set -x
 fi
 
@@ -103,12 +103,7 @@ else
     timeout=""
 fi
 
-declare -a IDs=()
-declare -A URLs=()
-declare -A names=()
-declare -A timestamps=()
-declare -A durations=()
-declare -A results=()
+[ -n "$debug" ] && [ "$(jq -r 'has("version")' < /tmp/input.json)" = 'true' ] && jq -r -S -M '.version' < /tmp/input.json
 
 readable_timestamp()
 {
@@ -156,6 +151,14 @@ readable_duration()
     fi
 }
 
+declare -a IDs=()
+declare -A URLs=()
+declare -A names=()
+declare -A timestamps=()
+declare -A durations=()
+declare -A results=()
+declare -A digests=()
+
 case "$0" in
     ('/opt/resource/check')
         URL="$protocol://$host$port/$job/api/json"
@@ -164,6 +167,8 @@ case "$0" in
         while read -r url; do
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+            digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
+            [ -n "$debug" ] && jq -r -S -M < "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
             timestamp=$(jq -r .timestamp < "$tmp")
@@ -175,6 +180,7 @@ case "$0" in
             timestamps[$id]=$(readable_timestamp "$timestamp")
             durations[$id]=$(readable_duration "$duration")
             results[$id]="$result"
+            digests[$id]="$digest"
             if [ -n "$builds" ] && [[ "$builds" -eq "${#IDs[*]}" ]]; then
                 break
             fi
@@ -250,6 +256,8 @@ case "$0" in
             done < <(jq -r '.builds | .[].url' < "$apijson")
         fi
         cp "$tmp" api.json
+        digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
+        [ -n "$debug" ] && jq -r -S -M < "$tmp"
         id=$(jq -r .id < "$tmp")
         name=$(jq -r .fullDisplayName < "$tmp")
         timestamp=$(jq -r .timestamp < "$tmp")
@@ -316,6 +324,8 @@ case "$0" in
         if [ "$url" != 'null' ]; then
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             curl --retry 3 -nsS "${url}api/json" | jq -r > "$tmp"
+            digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
+            [ -n "$debug" ] && jq -r -S -M < "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
             timestamp=$(jq -r .timestamp < "$tmp")
@@ -339,6 +349,7 @@ case "$0" in
                 json=$(cat <<ENDLINE
 [
   {
+    "digest": "${digests[$id]}",
     "url": "${URLs[$id]}",
     "name": "${names[$id]}",
     "timestamp": "${timestamps[$id]}",
@@ -351,6 +362,7 @@ ENDLINE
                 json=$(cat <<ENDLINE
 $json,
   {
+    "digest": "${digests[$id]}",
     "url": "${URLs[$id]}",
     "name": "${names[$id]}",
     "timestamp": "${timestamps[$id]}",
@@ -371,6 +383,7 @@ ENDLINE
         json=$(cat <<ENDLINE
 {
   "version": {
+    "digest": "${digest}",
     "url": "${url}",
     "name": "${name}",
     "timestamp": "${timestamp}",
