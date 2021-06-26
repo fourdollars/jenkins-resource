@@ -187,8 +187,10 @@ case "$0" in
             timestamp=$(jq -r .timestamp < "$tmp")
             duration=$(jq -r .duration < "$tmp")
             result=$(jq -r .result < "$tmp")
-            if [ -z "$skip" ] && [ "$result" = 'null' ]; then
-                continue
+            if [ -z "$skip" ]; then
+                if [ "$duration" = '0' ] || [ "$result" = 'null' ]; then
+                    continue
+                fi
             fi
             IDs+=("$id")
             URLs[$id]="$url"

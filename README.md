@@ -33,12 +33,12 @@ resource_types:
 * token: **Required**
 * job: **Required**, such as 'job/JOB_NAME'.
 * port: Optional
-* protocol: Optional, using 'https' by default.
+* protocol: Optional, such as 'http' or 'https', using 'https' by default.
 * timezone: Optional, such as 'Asia/Taipei'. 'UTC' by default.
 * timeout: Optional, seconds to timeout. No timeout by default.
-* builds: Limit the build number to check. No limit by default.
-* skip: Don't check the result in check step or don't wait for the result in get step.
-* crumb: Optional, 'skip' if you want to skip the crumbIssuer.
+* builds: Optional, limit the build number to check. No limit by default.
+* skip: Optional, don't check the result and the duration in check step or don't wait for the result in get step.
+* crumb: Optional, using 'skip' if you want to skip the crumbIssuer.
 * debug: Optional
 
 ```yaml
@@ -71,7 +71,7 @@ resources:
 
 #### check step params
 
- * skip: Don't check the result to skip the builds without result.
+ * skip: Don't check the result and the duration to skip the builds without the result or the duration.
 
 #### get step params
 
