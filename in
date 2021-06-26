@@ -180,7 +180,7 @@ case "$0" in
         while read -r url; do
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
-            digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
+            digest="sha256:$(jq -S -M 'del(.estimatedDuration,.nextBuild)' < "$tmp" | sha256sum | awk '{print $1}')"
             [ -n "$debug" ] && jq -r -S -C < "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
@@ -304,7 +304,7 @@ case "$0" in
             fi
         fi
         cp "$tmp" api.json
-        digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
+        digest="sha256:$(jq -S -M 'del(.estimatedDuration,.nextBuild)' < "$tmp" | sha256sum | awk '{print $1}')"
         [ -n "$debug" ] && jq -r -S -C < "$tmp"
         id=$(jq -r .id < "$tmp")
         name=$(jq -r .fullDisplayName < "$tmp")
@@ -382,7 +382,7 @@ case "$0" in
         if [ "$url" != 'null' ]; then
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
-            digest="sha256:$(jq -S -M 'del(.estimatedDuration)' < "$tmp" | sha256sum | awk '{print $1}')"
+            digest="sha256:$(jq -S -M 'del(.estimatedDuration,.nextBuild)' < "$tmp" | sha256sum | awk '{print $1}')"
             [ -n "$debug" ] && jq -r -S -C < "$tmp"
             id=$(jq -r .id < "$tmp")
             name=$(jq -r .fullDisplayName < "$tmp")
