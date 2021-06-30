@@ -111,6 +111,36 @@ else
     timeout=""
 fi
 
+if [ "$(jq -r '.params | has("expectedResult")' < /tmp/input.json)" = 'true' ]; then
+    case "$(jq -r '.params.expectedResult | type' < /tmp/input.json)" in
+        ('string')
+            expectedResult=("$(jq -r '.params.expectedResult' < /tmp/input.json)")
+            ;;
+        ('array')
+            mapfile -t expectedResult < <(jq -r '.params.expectedResult|.[]' < /tmp/input.json | sort)
+            ;;
+        (*)
+            echo "Type '$(jq -r '.params.expectedResult | type' < /tmp/input.json)' input is invalid for .params.expectedResult"
+            exit 1
+            ;;
+    esac
+elif [ "$(jq -r '.source | has("expectedResult")' < /tmp/input.json)" = 'true' ]; then
+    case "$(jq -r '.source.expectedResult | type' < /tmp/input.json)" in
+        ('string')
+            expectedResult=("$(jq -r '.source.expectedResult' < /tmp/input.json)")
+            ;;
+        ('array')
+            mapfile -t expectedResult < <(jq -r '.source.expectedResult|.[]' < /tmp/input.json | sort)
+            ;;
+        (*)
+            echo "Type '$(jq -r '.source.expectedResult | type' < /tmp/input.json)' input is invalid for .source.expectedResult"
+            exit 1
+            ;;
+    esac
+else
+    expectedResult=()
+fi
+
 if [ -n "$debug" ]; then
     printenv
     [ "$(jq -r 'has("version")' < /tmp/input.json)" = 'true' ] && jq -r -S -C '.version' < /tmp/input.json
@@ -192,6 +222,9 @@ case "$0" in
                     continue
                 fi
             fi
+            if [ -n "${expectedResult[*]}" ] && ! [[ "${expectedResult[*]}" =~ $result ]]; then
+                continue
+            fi
             IDs+=("$id")
             URLs[$id]="$url"
             names[$id]=$(echo "$name" | sed -e 's/\\/\\\\/g' -e 's/\"/\\\"/g')
@@ -210,22 +243,9 @@ case "$0" in
     ('/opt/resource/in')
         cd "$1"
         URL="$protocol://$host$port/$job/api/json"
-        expectedResult=()
         expectedMatch=
         url=
-        if [ "$(jq -r '.params | has("expectedResult")' < /tmp/input.json)" = 'true' ]; then
-            case "$(jq -r '.params.expectedResult | type' < /tmp/input.json)" in
-                ('string')
-                    expectedResult=("$(jq -r '.params.expectedResult' < /tmp/input.json)")
-                    ;;
-                ('array')
-                    mapfile -t expectedResult < <(jq -r '.params.expectedResult|.[]' < /tmp/input.json | sort)
-                    ;;
-                (*)
-                    echo "Type '$(jq -r '.params.expectedResult | type' < /tmp/input.json)' input is invalid for .params.expectedResult"
-                    exit 1
-                    ;;
-            esac
+        if [ -n "${expectedResult[*]}" ]; then
             duration=0
             result=
             until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do

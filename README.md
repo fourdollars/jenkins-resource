@@ -72,6 +72,7 @@ resources:
 #### check step params
 
  * skip: Don't check the result and the duration to skip the builds without the result or the duration.
+ * expectedResult: Optional, only check for the expected results.
 
 #### get step params
 
