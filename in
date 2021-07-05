@@ -255,8 +255,13 @@ case "$0" in
                     "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                     result=$(jq -r .result < "$tmp")
                     if [[ "${expectedResult[*]}" =~ $result ]]; then
-                        expectedMatch=1
-                        break
+                        if [ -z "$skip" ] && [ "$(jq -r .duration < "$tmp")" = "0" ]; then
+                            sleep 5
+                            duration=$((duration+5))
+                        else
+                            expectedMatch=1
+                            break
+                        fi
                     elif [ "$result" = 'null' ]; then
                         sleep 5
                         duration=$((duration+5))
@@ -271,8 +276,14 @@ case "$0" in
                         "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                         result=$(jq -r .result < "$tmp")
                         if [[ "${expectedResult[*]}" =~ $result ]]; then
-                            expectedMatch=1
-                            break 2
+                            if [ -z "$skip" ] && [ "$(jq -r .duration < "$tmp")" = "0" ]; then
+                                sleep 5
+                                duration=$((duration+5))
+                                break
+                            else
+                                expectedMatch=1
+                                break 2
+                            fi
                         elif [ "$result" = 'null' ]; then
                             sleep 5
                             duration=$((duration+5))
