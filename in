@@ -8,7 +8,6 @@ clearup ()
     set +x
     rm -f "$apijson"
     rm -f "$tmp"
-    rm -f /tmp/input.json
     rm -f ~/.netrc
 }
 
@@ -19,24 +18,24 @@ tmp=$(mktemp -u /tmp/json-XXXXXX)
 
 exec 3>&1
 exec 1>&2
-jq -M -S . < /dev/stdin > /tmp/input.json
+payload="$(cat <&0)"
 
-if [ "$(jq -r '.source | has("host")' < /tmp/input.json)" = 'true' ]; then
-    host="$(jq -r .source.host < /tmp/input.json)"
+if [ "$(jq -r '.source | has("host")' <<< "$payload")" = 'true' ]; then
+    host="$(jq -r .source.host <<< "$payload")"
 else
     echo 'You need to provide the host.'
     exit 1
 fi
 
-if [ "$(jq -r '.source | has("user")' < /tmp/input.json)" = 'true' ]; then
-    user="$(jq -r .source.user < /tmp/input.json)"
+if [ "$(jq -r '.source | has("user")' <<< "$payload")" = 'true' ]; then
+    user="$(jq -r .source.user <<< "$payload")"
 else
     echo 'You need to provide the user.'
     exit 1
 fi
 
-if [ "$(jq -r '.source | has("token")' < /tmp/input.json)" = 'true' ]; then
-    token="$(jq -r .source.token < /tmp/input.json)"
+if [ "$(jq -r '.source | has("token")' <<< "$payload")" = 'true' ]; then
+    token="$(jq -r .source.token <<< "$payload")"
 else
     echo 'You need to provide the token.'
     exit 1
@@ -48,8 +47,8 @@ machine $host
  password $token
 ENDLINE
 
-if [ "$(jq -r '.source | has("debug")' < /tmp/input.json)" = 'true' ]; then
-    debug="$(jq -r .source.debug < /tmp/input.json)"
+if [ "$(jq -r '.source | has("debug")' <<< "$payload")" = 'true' ]; then
+    debug="$(jq -r .source.debug <<< "$payload")"
 else
     debug=
 fi
@@ -58,82 +57,82 @@ if [ -n "$debug" ] && [ "$debug" = "verbose" ]; then
     set -x
 fi
 
-if [ "$(jq -r '.source | has("job")' < /tmp/input.json)" = 'true' ]; then
-    job="$(jq -r .source.job < /tmp/input.json)"
+if [ "$(jq -r '.source | has("job")' <<< "$payload")" = 'true' ]; then
+    job="$(jq -r .source.job <<< "$payload")"
 else
     echo 'You need to provide the job.'
     exit 1
 fi
 
-if [ "$(jq -r '.source | has("crumb")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .source.crumb < /tmp/input.json)" = 'skip' ]; then
+if [ "$(jq -r '.source | has("crumb")' <<< "$payload")" = 'true' ] && [ "$(jq -r .source.crumb <<< "$payload")" = 'skip' ]; then
     crumb_skip=1
 else
     crumb_skip=
 fi
 
-if [ "$(jq -r '.source | has("port")' < /tmp/input.json)" = 'true' ]; then
-    port=":$(jq -r .source.port < /tmp/input.json)"
+if [ "$(jq -r '.source | has("port")' <<< "$payload")" = 'true' ]; then
+    port=":$(jq -r .source.port <<< "$payload")"
 else
     port=""
 fi
 
-if [ "$(jq -r '.source | has("timezone")' < /tmp/input.json)" = 'true' ]; then
-    timezone="$(jq -r .source.timezone < /tmp/input.json)"
+if [ "$(jq -r '.source | has("timezone")' <<< "$payload")" = 'true' ]; then
+    timezone="$(jq -r .source.timezone <<< "$payload")"
 else
     timezone=UTC
 fi
 
-if [ "$(jq -r '.source | has("protocol")' < /tmp/input.json)" = 'true' ] && [ "$(jq -r .source.protocol < /tmp/input.json)" = "http" ]; then
+if [ "$(jq -r '.source | has("protocol")' <<< "$payload")" = 'true' ] && [ "$(jq -r .source.protocol <<< "$payload")" = "http" ]; then
     protocol="http"
 else
     protocol="https"
 fi
 
-if [ "$(jq -r '.source | has("builds")' < /tmp/input.json)" = 'true' ]; then
-    builds=$(jq -r .source.builds < /tmp/input.json)
+if [ "$(jq -r '.source | has("builds")' <<< "$payload")" = 'true' ]; then
+    builds=$(jq -r .source.builds <<< "$payload")
 else
     builds=
 fi
 
-if [ "$(jq -r '.params | has("skip")' < /tmp/input.json)" = 'true' ]; then
-    skip=$(jq -r .params.skip < /tmp/input.json)
-elif [ "$(jq -r '.source | has("skip")' < /tmp/input.json)" = 'true' ]; then
-    skip=$(jq -r .source.skip < /tmp/input.json)
+if [ "$(jq -r '.params | has("skip")' <<< "$payload")" = 'true' ]; then
+    skip=$(jq -r .params.skip <<< "$payload")
+elif [ "$(jq -r '.source | has("skip")' <<< "$payload")" = 'true' ]; then
+    skip=$(jq -r .source.skip <<< "$payload")
 else
     skip=
 fi
 
-if [ "$(jq -r '.params | has("timeout")' < /tmp/input.json)" = 'true' ]; then
-    timeout=$(jq -r .params.timeout < /tmp/input.json)
-elif [ "$(jq -r '.source | has("timeout")' < /tmp/input.json)" = 'true' ]; then
-    timeout=$(jq -r .source.timeout < /tmp/input.json)
+if [ "$(jq -r '.params | has("timeout")' <<< "$payload")" = 'true' ]; then
+    timeout=$(jq -r .params.timeout <<< "$payload")
+elif [ "$(jq -r '.source | has("timeout")' <<< "$payload")" = 'true' ]; then
+    timeout=$(jq -r .source.timeout <<< "$payload")
 else
     timeout=""
 fi
 
-if [ "$(jq -r '.params | has("expectedResult")' < /tmp/input.json)" = 'true' ]; then
-    case "$(jq -r '.params.expectedResult | type' < /tmp/input.json)" in
+if [ "$(jq -r '.params | has("expectedResult")' <<< "$payload")" = 'true' ]; then
+    case "$(jq -r '.params.expectedResult | type' <<< "$payload")" in
         ('string')
-            expectedResult=("$(jq -r '.params.expectedResult' < /tmp/input.json)")
+            expectedResult=("$(jq -r '.params.expectedResult' <<< "$payload")")
             ;;
         ('array')
-            mapfile -t expectedResult < <(jq -r '.params.expectedResult|.[]' < /tmp/input.json | sort)
+            mapfile -t expectedResult < <(jq -r '.params.expectedResult|.[]' <<< "$payload" | sort)
             ;;
         (*)
-            echo "Type '$(jq -r '.params.expectedResult | type' < /tmp/input.json)' input is invalid for .params.expectedResult"
+            echo "Type '$(jq -r '.params.expectedResult | type' <<< "$payload")' input is invalid for .params.expectedResult"
             exit 1
             ;;
     esac
-elif [ "$(jq -r '.source | has("expectedResult")' < /tmp/input.json)" = 'true' ]; then
-    case "$(jq -r '.source.expectedResult | type' < /tmp/input.json)" in
+elif [ "$(jq -r '.source | has("expectedResult")' <<< "$payload")" = 'true' ]; then
+    case "$(jq -r '.source.expectedResult | type' <<< "$payload")" in
         ('string')
-            expectedResult=("$(jq -r '.source.expectedResult' < /tmp/input.json)")
+            expectedResult=("$(jq -r '.source.expectedResult' <<< "$payload")")
             ;;
         ('array')
-            mapfile -t expectedResult < <(jq -r '.source.expectedResult|.[]' < /tmp/input.json | sort)
+            mapfile -t expectedResult < <(jq -r '.source.expectedResult|.[]' <<< "$payload" | sort)
             ;;
         (*)
-            echo "Type '$(jq -r '.source.expectedResult | type' < /tmp/input.json)' input is invalid for .source.expectedResult"
+            echo "Type '$(jq -r '.source.expectedResult | type' <<< "$payload")' input is invalid for .source.expectedResult"
             exit 1
             ;;
     esac
@@ -143,7 +142,7 @@ fi
 
 if [ -n "$debug" ]; then
     printenv
-    [ "$(jq -r 'has("version")' < /tmp/input.json)" = 'true' ] && jq -r -S -C '.version' < /tmp/input.json
+    [ "$(jq -r 'has("version")' <<< "$payload")" = 'true' ] && jq -r -S -C '.version' <<< "$payload"
 fi
 
 readable_timestamp()
@@ -232,7 +231,7 @@ case "$0" in
             durations[$id]=$(readable_duration "$duration")
             results[$id]="$result"
             digests[$id]="$digest"
-            if [ "$(jq -r '.version.digest' < /tmp/input.json)" = "$digest" ]; then
+            if [ "$(jq -r '.version.digest' <<< "$payload")" = "$digest" ]; then
                 break
             fi
             if [ -n "$builds" ] && [[ "$builds" -eq "${#IDs[*]}" ]]; then
@@ -249,8 +248,8 @@ case "$0" in
             duration=0
             result=
             until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
-                if [ "$(jq -r '.version | has("url")' < /tmp/input.json)" = 'true' ]; then
-                    url=$(jq -r '.version.url' < /tmp/input.json)
+                if [ "$(jq -r '.version | has("url")' <<< "$payload")" = 'true' ]; then
+                    url=$(jq -r '.version.url' <<< "$payload")
                     [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
                     "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                     result=$(jq -r .result < "$tmp")
@@ -302,8 +301,8 @@ case "$0" in
             fi
         fi
         if [ -z "$url" ]; then
-            if [ "$(jq -r '.version | has("url")' < /tmp/input.json)" = 'true' ]; then
-                url=$(jq -r '.version.url' < /tmp/input.json)
+            if [ "$(jq -r '.version | has("url")' <<< "$payload")" = 'true' ]; then
+                url=$(jq -r '.version.url' <<< "$payload")
                 duration=0
                 until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
                     [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
@@ -348,18 +347,18 @@ case "$0" in
     ('/opt/resource/out')
         cd "$1"
         PARAMS=()
-        if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ] || [ "$(jq -r '.params | has("fileParameters")' < /tmp/input.json)" = 'true' ]; then
+        if [ "$(jq -r '.params | has("stringParameters")' <<< "$payload")" = 'true' ] || [ "$(jq -r '.params | has("fileParameters")' <<< "$payload")" = 'true' ]; then
             URL="$protocol://$host$port/$job/buildWithParameters"
-            if [ "$(jq -r '.params | has("stringParameters")' < /tmp/input.json)" = 'true' ]; then
-                [ -n "$debug" ] && jq -r -S -C '.params.stringParameters' < /tmp/input.json
-                for key in $(jq -r '.params.stringParameters | to_entries | .[].key' < /tmp/input.json); do
-                    PARAMS+=("--form" "$key=$(jq -r ".params.stringParameters.$key" < /tmp/input.json)")
+            if [ "$(jq -r '.params | has("stringParameters")' <<< "$payload")" = 'true' ]; then
+                [ -n "$debug" ] && jq -r -S -C '.params.stringParameters' <<< "$payload"
+                for key in $(jq -r '.params.stringParameters | to_entries | .[].key' <<< "$payload"); do
+                    PARAMS+=("--form" "$key=$(jq -r ".params.stringParameters.$key" <<< "$payload")")
                 done
             fi
-            if [ "$(jq -r '.params | has("fileParameters")' < /tmp/input.json)" = 'true' ]; then
-                [ -n "$debug" ] && jq -r -S -C '.params.fileParameters' < /tmp/input.json
-                for key in $(jq -r '.params.fileParameters | to_entries | .[].key' < /tmp/input.json); do
-                    PARAMS+=("--form" "$key=@$(jq -r ".params.fileParameters.$key" < /tmp/input.json)")
+            if [ "$(jq -r '.params | has("fileParameters")' <<< "$payload")" = 'true' ]; then
+                [ -n "$debug" ] && jq -r -S -C '.params.fileParameters' <<< "$payload"
+                for key in $(jq -r '.params.fileParameters | to_entries | .[].key' <<< "$payload"); do
+                    PARAMS+=("--form" "$key=@$(jq -r ".params.fileParameters.$key" <<< "$payload")")
                 done
             fi
         else
