@@ -430,8 +430,12 @@ esac
 
 case "$0" in
     ('/opt/resource/check')
-        mapfile -t reverseIDs < <(sort -u -n <<<"${IDs[*]}")
         json=
+        if [ -n "${IDs[*]}" ]; then
+            mapfile -t reverseIDs < <(sort -u -n <<<"${IDs[*]}")
+        else
+            reverseIDs=()
+        fi
         for id in "${reverseIDs[@]}"; do
             if [ -z "$json" ]; then
                 json=$(cat <<ENDLINE
