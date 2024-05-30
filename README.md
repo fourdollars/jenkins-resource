@@ -82,6 +82,7 @@ resources:
 
 #### put step params
 
+ * expectedResult: Optional, only generate the expected results.
  * stringParameters: Optional.
  * fileParameters: Optional.
  * timeout: Optional, seconds to timeout. No timeout by default.

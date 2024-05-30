@@ -472,7 +472,10 @@ ENDLINE
         fi
         ;;
     ('/opt/resource/in'|'/opt/resource/out')
-        json=$(cat <<ENDLINE
+        if [ "$0" = '/opt/resource/out' ] && [ -n "${expectedResult[*]}" ] && ! [[ "${expectedResult[*]}" =~ $result ]]; then
+            json="{}"
+        else
+            json=$(cat <<ENDLINE
 {
   "version": {
     "digest": "${digest}",
@@ -492,6 +495,7 @@ ENDLINE
 }
 ENDLINE
 )
+        fi
         ;;
 esac
 
