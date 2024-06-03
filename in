@@ -473,7 +473,16 @@ ENDLINE
         ;;
     ('/opt/resource/in'|'/opt/resource/out')
         if [ "$0" = '/opt/resource/out' ] && [ -n "${expectedResult[*]}" ] && ! [[ "${expectedResult[*]}" =~ $result ]]; then
-            json="{}"
+            if [ "$(jq -r 'has("version")' <<< "$payload")" = 'true' ]; then
+                json=$(cat <<ENDLINE
+{
+  "version": $(jq -S -M '.version' <<< "$payload")
+}
+ENDLINE
+)
+            else
+                json="{}"
+            fi
         else
             json=$(cat <<ENDLINE
 {
