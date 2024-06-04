@@ -406,6 +406,11 @@ case "$0" in
                 [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
                 "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
                 result=$(jq -r .result < "$tmp")
+                if [ "$(jq -r .duration < "$tmp")" = '0' ]; then
+                    sleep 5
+                    duration=$((duration+5))
+                    continue
+                fi
                 if [[ "${expectedResult[*]}" =~ $result ]]; then
                     break
                 elif [ "$result" != 'null' ]; then
