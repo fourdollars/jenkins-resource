@@ -402,18 +402,43 @@ case "$0" in
         url=
 
         until [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; do
-            [ -z "$debug" ] && echo "curl -nsS ${queue}api/json  # $duration/$timeout"
-            "${CURL[@]}" "${queue}api/json" > queue.json
-            [ -n "$debug" ] && jq -r -S -C < queue.json
-            url=$(jq -r '.executable | .url' < queue.json)
-            if [ "$url" != 'null' ]; then
-                break
+            if [ -n "$url" ] && [ "$url" != 'null' ] && [ -n "${expectedResult[*]}" ]; then
+                [ -z "$debug" ] && echo "curl -nsS ${url}api/json  # $duration/$timeout"
+                "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
+                result=$(jq -r .result < "$tmp")
+                if [[ "${expectedResult[*]}" =~ $result ]]; then
+                    break
+                elif [ "$result" != 'null' ]; then
+                    IFS=' '
+                    echo "$url doesn't have the expected results in \"${expectedResult[*]}\" ($result)."
+                    IFS=$'\n\t'
+                    exit 1
+                fi
+            else
+                [ -z "$debug" ] && echo "curl -nsS ${queue}api/json  # $duration/$timeout"
+                "${CURL[@]}" "${queue}api/json" > queue.json
+                [ -n "$debug" ] && jq -r -S -C < queue.json
+                url=$(jq -r '.executable | .url' < queue.json)
+                if [ "$url" != 'null' ]; then
+                    if [ -n "${expectedResult[*]}" ]; then
+                        continue
+                    else
+                        break
+                    fi
+                fi
             fi
             sleep 5
             duration=$((duration+5))
         done
 
-        if [ "$url" != 'null' ]; then
+        if [ -n "$timeout" ] && [[ $duration -ge $timeout ]]; then
+            if [ "$url" = 'null' ]; then
+                echo "No build and timed out ($duration/$timeout)."
+            else
+                echo "$url timed out ($duration/$timeout)."
+            fi
+            exit 1
+        else
             [ -z "$debug" ] && echo "curl -nsS ${url}api/json"
             "${CURL[@]}" "${url}api/json" | jq -r > "$tmp"
             digest="sha256:$(jq -S -M 'del(.estimatedDuration,.nextBuild)' < "$tmp" | sha256sum | awk '{print $1}')"
@@ -425,9 +450,6 @@ case "$0" in
             duration=$(jq -r .duration < "$tmp")
             duration=$(readable_duration "$duration")
             result=$(jq -r .result < "$tmp")
-        else
-            echo "No build and timed out ($duration/$timeout)."
-            exit 1
         fi
         ;;
 esac
