@@ -351,15 +351,19 @@ case "$0" in
             URL="$protocol://$host$port/$job/buildWithParameters"
             if [ "$(jq -r '.params | has("stringParameters")' <<< "$payload")" = 'true' ]; then
                 [ -n "$debug" ] && jq -r -S -C '.params.stringParameters' <<< "$payload"
-                for key in $(jq -r '.params.stringParameters | to_entries | .[].key' <<< "$payload"); do
-                    PARAMS+=("--form" "$key=$(jq -r ".params.stringParameters.$key" <<< "$payload")")
-                done
+                if [ "$(jq -S -M '.params.stringParameters | length' <<< "$payload")" != '0' ]; then
+                    for key in $(jq -r '.params.stringParameters | to_entries | .[].key' <<< "$payload"); do
+                        PARAMS+=("--form" "$key=$(jq -r ".params.stringParameters.$key" <<< "$payload")")
+                    done
+                fi
             fi
             if [ "$(jq -r '.params | has("fileParameters")' <<< "$payload")" = 'true' ]; then
                 [ -n "$debug" ] && jq -r -S -C '.params.fileParameters' <<< "$payload"
-                for key in $(jq -r '.params.fileParameters | to_entries | .[].key' <<< "$payload"); do
-                    PARAMS+=("--form" "$key=@$(jq -r ".params.fileParameters.$key" <<< "$payload")")
-                done
+                if [ "$(jq -S -M '.params.fileParameters | length' <<< "$payload")" != '0' ]; then
+                    for key in $(jq -r '.params.fileParameters | to_entries | .[].key' <<< "$payload"); do
+                        PARAMS+=("--form" "$key=@$(jq -r ".params.fileParameters.$key" <<< "$payload")")
+                    done
+                fi
             fi
         else
             URL="$protocol://$host$port/$job/build"
