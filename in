@@ -200,6 +200,7 @@ declare -A results=()
 declare -A digests=()
 
 CURL=(curl --retry 3 --max-time 10 -nsS)
+CURL_ONCE=(curl --max-time 30 -nsS)
 
 case "$0" in
     ('/opt/resource/check')
@@ -380,18 +381,18 @@ case "$0" in
         if [ -z "${PARAMS[*]}" ]; then
             [ -z "$debug" ] && echo "curl -nsS -X POST $URL"
             if [ -z "$crumb_skip" ]; then
-                "${CURL[@]}" -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
+                "${CURL_ONCE[@]}" -X POST -D headers "$URL" -H "$crumbRequestField: $crumb"
             else
-                "${CURL[@]}" -X POST -D headers "$URL"
+                "${CURL_ONCE[@]}" -X POST -D headers "$URL"
             fi
         else
             IFS=' '
             [ -z "$debug" ] && echo "curl -nsS -X POST $URL ${PARAMS[*]}"
             IFS=$'\n\t'
             if [ -z "$crumb_skip" ]; then
-                "${CURL[@]}" -X POST -D headers "$URL" -H "$crumbRequestField: $crumb" "${PARAMS[@]}"
+                "${CURL_ONCE[@]}" -X POST -D headers "$URL" -H "$crumbRequestField: $crumb" "${PARAMS[@]}"
             else
-                "${CURL[@]}" -X POST -D headers "$URL" "${PARAMS[@]}"
+                "${CURL_ONCE[@]}" -X POST -D headers "$URL" "${PARAMS[@]}"
             fi
         fi
 
